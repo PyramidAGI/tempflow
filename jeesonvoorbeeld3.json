@@ -1,0 +1,28 @@
+{
+  "sections": [
+    {
+      "id": 1,
+      "title": "Fases",
+      "fields": [
+        {
+          "id": 1768300606426,
+          "label": "Foto",
+          "type": "jpg",
+          "required": true
+        }
+      ]
+    },
+    {
+      "id": 2,
+      "title": "Endfases",
+      "fields": [
+        {
+          "id": 1768300649826,
+          "label": "Fase2",
+          "type": "text",
+          "required": true
+        }
+      ]
+    }
+  ]
+}
