@@ -3,81 +3,24 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Template Form Editor</title>
+    <title>Tempflow Admin Dashboard</title>
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/antd@5.13.0/dist/reset.css"
+    />
+    <link
+      rel="stylesheet"
+      href="https://cdn.jsdelivr.net/npm/antd@5.13.0/dist/antd.min.css"
+    />
     <link rel="stylesheet" href="styles.css" />
   </head>
   <body>
-    <header class="app-header">
-      <div>
-        <h1>Template Form Editor</h1>
-        <p>Build and edit form templates based on JSON sections and fields.</p>
-      </div>
-      <div class="header-actions">
-        <button id="load-sample" type="button">Load Sample</button>
-        <button id="export-json" type="button" class="primary">Export JSON</button>
-      </div>
-    </header>
+    <div id="root"></div>
 
-    <main class="app-body">
-      <section class="builder">
-        <div class="builder-header">
-          <h2>Sections</h2>
-          <button id="add-section" type="button">Add section</button>
-        </div>
-        <div id="sections" class="sections"></div>
-      </section>
-
-      <aside class="preview">
-        <h2>JSON Output</h2>
-        <textarea id="json-output" spellcheck="false"></textarea>
-        <div class="hint">
-          Tip: Edit fields on the left to update this JSON output.
-        </div>
-      </aside>
-    </main>
-
-    <template id="section-template">
-      <article class="section-card">
-        <header class="section-header">
-          <div class="field">
-            <label>Section title</label>
-            <input type="text" name="section-title" />
-          </div>
-          <div class="section-actions">
-            <button type="button" data-action="add-field">Add field</button>
-            <button type="button" data-action="remove-section" class="ghost">Remove</button>
-          </div>
-        </header>
-        <div class="fields"></div>
-      </article>
-    </template>
-
-    <template id="field-template">
-      <div class="field-row">
-        <div class="field">
-          <label>Label</label>
-          <input type="text" name="field-label" />
-        </div>
-        <div class="field">
-          <label>Type</label>
-          <select name="field-type">
-            <option value="text">Text</option>
-            <option value="number">Number</option>
-            <option value="date">Date</option>
-            <option value="jpg">Photo (jpg)</option>
-            <option value="email">Email</option>
-            <option value="phone">Phone number</option>
-            <option value="textarea">Textarea</option>
-          </select>
-        </div>
-        <div class="field inline">
-          <label>Required</label>
-          <input type="checkbox" name="field-required" />
-        </div>
-        <button type="button" data-action="remove-field" class="ghost">Remove</button>
-      </div>
-    </template>
-
-    <script src="app.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react@18/umd/react.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/react-dom@18/umd/react-dom.development.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/antd@5.13.0/dist/antd.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@babel/standalone/babel.min.js"></script>
+    <script type="text/babel" src="app.js"></script>
   </body>
 </html>
