@@ -1,0 +1,592 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Graph Editor - Alpine.js</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+      :root {
+        font-family: "Inter", "Segoe UI", system-ui, sans-serif;
+        background: #f6f7fb;
+        color: #1d1f27;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+      }
+
+      .app-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 24px;
+        background: #ffffff;
+        border-bottom: 1px solid #e3e6ef;
+        gap: 16px;
+      }
+
+      .app-header h1 {
+        margin: 0;
+        font-size: 20px;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 8px;
+      }
+
+      button {
+        border: 1px solid #c7ccda;
+        background: #ffffff;
+        padding: 8px 14px;
+        border-radius: 6px;
+        font-weight: 600;
+        cursor: pointer;
+        color: #1d1f27;
+        font-size: 13px;
+      }
+
+      button.primary {
+        background: #3559e0;
+        border-color: #3559e0;
+        color: #ffffff;
+      }
+
+      button.danger {
+        background: #e03545;
+        border-color: #e03545;
+        color: #ffffff;
+      }
+
+      button:hover {
+        filter: brightness(0.95);
+      }
+
+      .toolbar {
+        display: flex;
+        gap: 16px;
+        padding: 12px 24px;
+        background: #fff;
+        border-bottom: 1px solid #e3e6ef;
+        align-items: center;
+        font-size: 13px;
+      }
+
+      .toolbar label {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        color: #4d5360;
+      }
+
+      .mode-indicator {
+        padding: 4px 10px;
+        border-radius: 4px;
+        font-weight: 600;
+        font-size: 12px;
+      }
+
+      .mode-indicator.connect {
+        background: #e8f5e9;
+        color: #2e7d32;
+      }
+
+      .mode-indicator.normal {
+        background: #e3f2fd;
+        color: #1565c0;
+      }
+
+      /* Graph container */
+      .graph-container {
+        position: relative;
+        height: calc(100vh - 120px);
+        overflow: hidden;
+        background: 
+          linear-gradient(90deg, #e3e6ef 1px, transparent 1px),
+          linear-gradient(#e3e6ef 1px, transparent 1px);
+        background-size: 20px 20px;
+      }
+
+      /* SVG for connections */
+      .connections {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        pointer-events: none;
+      }
+
+      .connections line {
+        stroke: #3559e0;
+        stroke-width: 2;
+        stroke-linecap: round;
+      }
+
+      .connections line.preview {
+        stroke: #94a3b8;
+        stroke-dasharray: 5, 5;
+      }
+
+      /* Arrow markers */
+      .connections marker path {
+        fill: #3559e0;
+      }
+
+      /* Nodes */
+      .node {
+        position: absolute;
+        background: #ffffff;
+        border: 2px solid #e3e6ef;
+        border-radius: 8px;
+        padding: 12px 16px;
+        min-width: 120px;
+        cursor: grab;
+        box-shadow: 0 4px 12px rgba(17, 23, 41, 0.1);
+        transition: box-shadow 0.15s, border-color 0.15s;
+        user-select: none;
+      }
+
+      .node:hover {
+        border-color: #3559e0;
+      }
+
+      .node.dragging {
+        cursor: grabbing;
+        box-shadow: 0 8px 24px rgba(17, 23, 41, 0.15);
+        z-index: 100;
+      }
+
+      .node.selected {
+        border-color: #3559e0;
+        box-shadow: 0 0 0 3px rgba(53, 89, 224, 0.2);
+      }
+
+      .node.connect-source {
+        border-color: #2e7d32;
+        box-shadow: 0 0 0 3px rgba(46, 125, 50, 0.2);
+      }
+
+      .node input {
+        border: none;
+        background: transparent;
+        font-size: 14px;
+        font-weight: 500;
+        width: 100%;
+        outline: none;
+        text-align: center;
+      }
+
+      .node-id {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background: #3559e0;
+        color: white;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 10px;
+        font-weight: 600;
+      }
+
+      /* Connection points */
+      .connect-point {
+        position: absolute;
+        width: 12px;
+        height: 12px;
+        background: #3559e0;
+        border: 2px solid white;
+        border-radius: 50%;
+        cursor: crosshair;
+        opacity: 0;
+        transition: opacity 0.15s;
+      }
+
+      .node:hover .connect-point,
+      .connect-mode .connect-point {
+        opacity: 1;
+      }
+
+      .connect-point.right {
+        right: -6px;
+        top: 50%;
+        transform: translateY(-50%);
+      }
+
+      .connect-point.bottom {
+        bottom: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+      }
+
+      /* Instructions */
+      .instructions {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: white;
+        padding: 12px 16px;
+        border-radius: 8px;
+        font-size: 12px;
+        color: #4d5360;
+        box-shadow: 0 4px 12px rgba(17, 23, 41, 0.1);
+        max-width: 280px;
+      }
+
+      .instructions strong {
+        color: #1d1f27;
+      }
+
+      .instructions ul {
+        margin: 8px 0 0;
+        padding-left: 16px;
+      }
+
+      .instructions li {
+        margin: 4px 0;
+      }
+    </style>
+  </head>
+  <body x-data="graphEditor()">
+    <header class="app-header">
+      <h1>📊 Graph Editor</h1>
+      <div class="header-actions">
+        <button @click="addNode">+ Add Node</button>
+        <button @click="clearAll" class="danger">Clear All</button>
+        <button @click="loadSample" class="primary">Load Sample</button>
+      </div>
+    </header>
+
+    <div class="toolbar">
+      <label>
+        <input type="checkbox" x-model="connectMode" />
+        Connect Mode
+      </label>
+      <span class="mode-indicator" :class="connectMode ? 'connect' : 'normal'" x-text="connectMode ? '🔗 Click nodes to connect' : '✋ Drag to move'"></span>
+      <span style="color: #94a3b8;">|</span>
+      <span style="color: #4d5360;">Nodes: <strong x-text="nodes.length"></strong></span>
+      <span style="color: #4d5360;">Connections: <strong x-text="connections.length"></strong></span>
+    </div>
+
+    <div class="graph-container" 
+         :class="{ 'connect-mode': connectMode }"
+         @mousemove="onMouseMove"
+         @mouseup="onMouseUp"
+         @click="onContainerClick">
+      
+      <!-- SVG for drawing lines -->
+      <svg class="connections">
+        <defs>
+          <marker id="arrowhead" markerWidth="10" markerHeight="7" refX="9" refY="3.5" orient="auto">
+            <path d="M0,0 L0,7 L10,3.5 Z" />
+          </marker>
+        </defs>
+        
+        <!-- Existing connections - using x-html to properly render SVG -->
+        <g x-html="renderConnections()"></g>
+        
+        <!-- Preview line while connecting -->
+        <line 
+          x-show="connectMode && connectFrom && mousePos"
+          :x1="connectFrom ? getNodeCenter(connectFrom).x : 0"
+          :y1="connectFrom ? getNodeCenter(connectFrom).y : 0"
+          :x2="mousePos?.x || 0"
+          :y2="mousePos?.y || 0"
+          class="preview"
+        />
+      </svg>
+
+      <!-- Nodes -->
+      <template x-for="node in nodes" :key="node.id">
+        <div 
+          class="node"
+          :class="{ 
+            'dragging': draggingNode?.id === node.id,
+            'selected': selectedNode?.id === node.id,
+            'connect-source': connectFrom === node.id
+          }"
+          :style="`left: ${node.x}px; top: ${node.y}px;`"
+          @mousedown.stop="onNodeMouseDown($event, node)"
+          @mouseup.stop="onNodeMouseUp(node)"
+          @click.stop="onNodeClick(node)"
+        >
+          <span class="node-id" x-text="node.id"></span>
+          <input 
+            type="text" 
+            x-model="node.label" 
+            @mousedown.stop
+            @click.stop
+            placeholder="Node label"
+          />
+          
+          <!-- Connection point -->
+          <div class="connect-point right" @mousedown.stop="startConnect(node.id)"></div>
+        </div>
+      </template>
+
+      <!-- Instructions -->
+      <div class="instructions">
+        <strong>How to use:</strong>
+        <ul>
+          <li><strong>Drag</strong> nodes to move them</li>
+          <li><strong>Click</strong> a node to select it</li>
+          <li>Enable <strong>Connect Mode</strong>, then <strong>drag</strong> from one node to another to link them</li>
+          <li>Press <strong>Delete</strong> to remove selected node</li>
+          <li>Double-click label to <strong>edit</strong></li>
+        </ul>
+      </div>
+    </div>
+
+    <script>
+      function graphEditor() {
+        return {
+          nodes: [],
+          connections: [],
+          selectedNode: null,
+          draggingNode: null,
+          dragOffset: { x: 0, y: 0 },
+          connectMode: false,
+          connectFrom: null,
+          mousePos: null,
+          nodeCounter: 0,
+
+          init() {
+            // Keyboard listener for delete
+            document.addEventListener('keydown', (e) => {
+              if (e.key === 'Delete' && this.selectedNode) {
+                this.deleteNode(this.selectedNode.id);
+              }
+              if (e.key === 'Escape') {
+                this.connectFrom = null;
+                this.selectedNode = null;
+              }
+            });
+            
+            // Start with sample
+            this.loadSample();
+          },
+
+          // Add a new node
+          addNode() {
+            this.nodeCounter++;
+            const offsetX = (this.nodeCounter % 5) * 30;
+            const offsetY = Math.floor(this.nodeCounter / 5) * 30;
+            
+            this.nodes.push({
+              id: this.nodeCounter,
+              label: `Node ${this.nodeCounter}`,
+              x: 100 + offsetX,
+              y: 100 + offsetY,
+              width: 120,
+              height: 50
+            });
+          },
+
+          // Delete a node and its connections
+          deleteNode(nodeId) {
+            this.nodes = this.nodes.filter(n => n.id !== nodeId);
+            this.connections = this.connections.filter(c => c.from !== nodeId && c.to !== nodeId);
+            this.selectedNode = null;
+          },
+
+          // Clear all nodes and connections
+          clearAll() {
+            this.nodes = [];
+            this.connections = [];
+            this.selectedNode = null;
+            this.connectFrom = null;
+            this.nodeCounter = 0;
+          },
+
+          // Load sample graph
+          loadSample() {
+            this.clearAll();
+            this.nodeCounter = 5;
+            
+            this.nodes = [
+              { id: 1, label: 'Start', x: 100, y: 200, width: 120, height: 50 },
+              { id: 2, label: 'Process A', x: 300, y: 100, width: 120, height: 50 },
+              { id: 3, label: 'Process B', x: 300, y: 300, width: 120, height: 50 },
+              { id: 4, label: 'Decision', x: 500, y: 200, width: 120, height: 50 },
+              { id: 5, label: 'End', x: 700, y: 200, width: 120, height: 50 }
+            ];
+            
+            this.connections = [
+              { id: 1, from: 1, to: 2 },
+              { id: 2, from: 1, to: 3 },
+              { id: 3, from: 2, to: 4 },
+              { id: 4, from: 3, to: 4 },
+              { id: 5, from: 4, to: 5 }
+            ];
+          },
+
+          // Render connections as SVG lines (x-for doesn't work well with SVG)
+          renderConnections() {
+            return this.connections.map(conn => {
+              const from = this.getNodeCenter(conn.from);
+              const to = this.getNodeCenter(conn.to);
+              return `<line x1="${from.x}" y1="${from.y}" x2="${to.x}" y2="${to.y}" marker-end="url(#arrowhead)" />`;
+            }).join('');
+          },
+
+          // Get center position of a node
+          getNodeCenter(nodeId) {
+            const node = this.nodes.find(n => n.id === nodeId);
+            if (!node) return { x: 0, y: 0 };
+            return {
+              x: node.x + 60,  // half of min-width
+              y: node.y + 25   // half of approximate height
+            };
+          },
+
+          // Node mouse down - start dragging or connecting
+          onNodeMouseDown(event, node) {
+            if (this.connectMode) {
+              // Start connection on mousedown in connect mode
+              this.connectFrom = node.id;
+              // Initialize mousePos to start showing preview line
+              const container = document.querySelector('.graph-container');
+              const rect = container.getBoundingClientRect();
+              this.mousePos = {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+              };
+              return;
+            }
+            
+            this.draggingNode = node;
+            this.dragOffset = {
+              x: event.clientX - node.x,
+              y: event.clientY - node.y
+            };
+          },
+
+          // Node mouse up - complete connection if dragging to connect
+          onNodeMouseUp(node) {
+            if (this.connectFrom !== null && this.connectFrom !== node.id) {
+              // Create connection
+              const exists = this.connections.some(
+                c => c.from === this.connectFrom && c.to === node.id
+              );
+              if (!exists) {
+                this.connections = [...this.connections, {
+                  id: Date.now(),
+                  from: this.connectFrom,
+                  to: node.id
+                }];
+              }
+            }
+            this.connectFrom = null;
+            this.mousePos = null;
+            this.draggingNode = null;
+          },
+
+          // Node click - select or connect
+          onNodeClick(node) {
+            if (this.connectMode) {
+              if (this.connectFrom === null) {
+                this.connectFrom = node.id;
+              } else if (this.connectFrom !== node.id) {
+                // Create connection
+                const exists = this.connections.some(
+                  c => c.from === this.connectFrom && c.to === node.id
+                );
+                if (!exists) {
+                  // Use spread to create new array - ensures Alpine reactivity
+                  this.connections = [...this.connections, {
+                    id: Date.now(),
+                    from: this.connectFrom,
+                    to: node.id
+                  }];
+                }
+                this.connectFrom = null;
+              }
+            } else {
+              this.selectedNode = node;
+            }
+          },
+
+          // Mouse move - handle dragging
+          onMouseMove(event) {
+            // Update mouse position for preview line
+            if (this.connectMode && this.connectFrom) {
+              const rect = event.currentTarget.getBoundingClientRect();
+              this.mousePos = {
+                x: event.clientX - rect.left,
+                y: event.clientY - rect.top
+              };
+            }
+
+            // Handle dragging
+            if (this.draggingNode) {
+              const container = event.currentTarget.getBoundingClientRect();
+              this.draggingNode.x = Math.max(0, Math.min(
+                event.clientX - this.dragOffset.x,
+                container.width - 120
+              ));
+              this.draggingNode.y = Math.max(0, Math.min(
+                event.clientY - this.dragOffset.y,
+                container.height - 50
+              ));
+            }
+          },
+
+          // Mouse up on container - check if we should create a connection
+          onMouseUp(event) {
+            // If we were connecting, check if we're over a node
+            if (this.connectFrom !== null) {
+              const container = event.currentTarget.getBoundingClientRect();
+              const mouseX = event.clientX - container.left;
+              const mouseY = event.clientY - container.top;
+              
+              // Find if we're over any node
+              const targetNode = this.nodes.find(node => {
+                return mouseX >= node.x && mouseX <= node.x + 120 &&
+                       mouseY >= node.y && mouseY <= node.y + 50;
+              });
+              
+              if (targetNode && targetNode.id !== this.connectFrom) {
+                // Create connection
+                const exists = this.connections.some(
+                  c => c.from === this.connectFrom && c.to === targetNode.id
+                );
+                if (!exists) {
+                  this.connections = [...this.connections, {
+                    id: Date.now(),
+                    from: this.connectFrom,
+                    to: targetNode.id
+                  }];
+                }
+              }
+              
+              this.connectFrom = null;
+              this.mousePos = null;
+            }
+            
+            this.draggingNode = null;
+          },
+
+          // Container click - deselect
+          onContainerClick(event) {
+            // Only deselect if clicking on the background
+            if (!this.connectMode) {
+              this.selectedNode = null;
+            }
+          },
+
+          // Start connecting from a connection point
+          startConnect(nodeId) {
+            this.connectMode = true;
+            this.connectFrom = nodeId;
+          }
+        };
+      }
+    </script>
+  </body>
+</html>

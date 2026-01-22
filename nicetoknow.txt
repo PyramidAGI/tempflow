@@ -1,0 +1,23 @@
+
+we have the causal with the grounding triangles
+
+and the grounding is now done with a form with transforms and references
+
+with this we can model any problem
+
+but is this a breakthrough? maybe .... yes, maybe ... no
+
+we need something more
+
+like for instance, a world model
+
+or a joystick paradigm where we can rotate and manipulate
+
+the nodes and edges and see the planning for a certain situation
+
+compare it to empa-assist where there is a graph.
+
+and we could perhaps join the two projects: empa-assist and tempflow
+
+a form element consists of three things: before, after and reference
+

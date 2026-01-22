@@ -1,0 +1,820 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Formulieren Bouwer</title>
+    <script defer src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <style>
+      :root {
+        font-family: "Segoe UI", system-ui, sans-serif;
+        background: #f5f5f5;
+        color: #333;
+      }
+
+      * {
+        box-sizing: border-box;
+        margin: 0;
+        padding: 0;
+      }
+
+      body {
+        min-height: 100vh;
+      }
+
+      /* Header */
+      .app-header {
+        background: #1a73e8;
+        color: white;
+        padding: 16px 24px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+      }
+
+      .app-header h1 {
+        font-size: 20px;
+        font-weight: 500;
+      }
+
+      .header-actions {
+        display: flex;
+        gap: 12px;
+      }
+
+      .header-actions button {
+        background: rgba(255,255,255,0.15);
+        border: none;
+        color: white;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .header-actions button:hover {
+        background: rgba(255,255,255,0.25);
+      }
+
+      .header-actions button.primary {
+        background: white;
+        color: #1a73e8;
+      }
+
+      /* Main layout */
+      .app-body {
+        display: grid;
+        grid-template-columns: 1fr 350px;
+        gap: 24px;
+        padding: 24px;
+        max-width: 1400px;
+        margin: 0 auto;
+      }
+
+      /* Builder area */
+      .builder {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 24px;
+        min-height: 600px;
+      }
+
+      .builder-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid #e0e0e0;
+      }
+
+      .builder-header h2 {
+        font-size: 16px;
+        font-weight: 500;
+      }
+
+      .add-root-btn {
+        background: #1a73e8;
+        color: white;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 4px;
+        cursor: pointer;
+        font-size: 14px;
+      }
+
+      .add-root-btn:hover {
+        background: #1557b0;
+      }
+
+      /* Tree structure */
+      .tree {
+        position: relative;
+      }
+
+      .tree-item {
+        position: relative;
+        margin-left: 0;
+      }
+
+      .tree-item.child {
+        margin-left: 40px;
+      }
+
+      /* Vertical line for parent */
+      .tree-item.has-children::before {
+        content: '';
+        position: absolute;
+        left: 20px;
+        top: 48px;
+        bottom: 24px;
+        width: 2px;
+        background: #dadce0;
+      }
+
+      /* Horizontal line for children */
+      .tree-item.child::after {
+        content: '';
+        position: absolute;
+        left: -20px;
+        top: 24px;
+        width: 20px;
+        height: 2px;
+        background: #dadce0;
+      }
+
+      /* Vertical connector to parent */
+      .tree-item.child::before {
+        content: '';
+        position: absolute;
+        left: -20px;
+        top: -12px;
+        bottom: calc(100% - 26px);
+        width: 2px;
+        background: #dadce0;
+      }
+
+      /* Item node */
+      .item-node {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px 16px;
+        background: #fff;
+        border: 1px solid #dadce0;
+        border-radius: 4px;
+        margin-bottom: 12px;
+        cursor: pointer;
+        position: relative;
+        transition: border-color 0.15s, box-shadow 0.15s;
+      }
+
+      .item-node:hover {
+        border-color: #1a73e8;
+      }
+
+      .item-node.selected {
+        border-color: #1a73e8;
+        box-shadow: 0 0 0 1px #1a73e8;
+      }
+
+      .item-node.dragging {
+        opacity: 0.5;
+      }
+
+      .item-handle {
+        color: #9e9e9e;
+        cursor: grab;
+        padding: 4px;
+      }
+
+      .item-handle:active {
+        cursor: grabbing;
+      }
+
+      .item-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .item-label {
+        font-size: 14px;
+        font-weight: 500;
+        color: #333;
+        border: none;
+        background: transparent;
+        width: 100%;
+        outline: none;
+      }
+
+      .item-label:focus {
+        background: #f5f5f5;
+        padding: 4px 8px;
+        margin: -4px -8px;
+        border-radius: 4px;
+      }
+
+      .item-type {
+        font-size: 12px;
+        color: #757575;
+      }
+
+      .item-badges {
+        display: flex;
+        gap: 6px;
+      }
+
+      .badge {
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 3px;
+        background: #e8f0fe;
+        color: #1a73e8;
+      }
+
+      .badge.required {
+        background: #fce8e6;
+        color: #d93025;
+      }
+
+      .badge.logic {
+        background: #e6f4ea;
+        color: #137333;
+      }
+
+      .badge.waarden {
+        background: #fef7e0;
+        color: #ea8600;
+      }
+
+      .item-menu-btn {
+        background: none;
+        border: none;
+        padding: 8px;
+        cursor: pointer;
+        color: #757575;
+        border-radius: 50%;
+      }
+
+      .item-menu-btn:hover {
+        background: #f5f5f5;
+      }
+
+      /* Context Menu */
+      .context-menu {
+        position: fixed;
+        background: white;
+        border-radius: 4px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+        min-width: 200px;
+        z-index: 1000;
+        padding: 8px 0;
+      }
+
+      .context-menu-item {
+        padding: 10px 16px;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        font-size: 14px;
+        color: #333;
+      }
+
+      .context-menu-item:hover {
+        background: #f5f5f5;
+      }
+
+      .context-menu-item.danger {
+        color: #d93025;
+      }
+
+      .context-menu-divider {
+        height: 1px;
+        background: #e0e0e0;
+        margin: 8px 0;
+      }
+
+      .context-menu-item svg {
+        width: 18px;
+        height: 18px;
+        opacity: 0.7;
+      }
+
+      /* Info panel */
+      .info-panel {
+        background: white;
+        border-radius: 8px;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        padding: 24px;
+      }
+
+      .info-panel h2 {
+        font-size: 24px;
+        font-weight: 400;
+        margin-bottom: 16px;
+        color: #333;
+      }
+
+      .info-panel p {
+        font-size: 14px;
+        line-height: 1.6;
+        color: #5f6368;
+      }
+
+      /* Field type selector */
+      .field-types {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 8px;
+        margin-top: 20px;
+      }
+
+      .field-type-btn {
+        padding: 12px;
+        border: 1px solid #dadce0;
+        background: white;
+        border-radius: 4px;
+        cursor: pointer;
+        text-align: left;
+        font-size: 12px;
+        color: #5f6368;
+        transition: border-color 0.15s;
+      }
+
+      .field-type-btn:hover {
+        border-color: #1a73e8;
+        background: #f8f9fa;
+      }
+
+      .field-type-btn span {
+        display: block;
+        margin-top: 4px;
+        font-weight: 500;
+        color: #333;
+      }
+
+      /* Empty state */
+      .empty-state {
+        text-align: center;
+        padding: 60px 20px;
+        color: #757575;
+      }
+
+      .empty-state svg {
+        width: 64px;
+        height: 64px;
+        margin-bottom: 16px;
+        opacity: 0.5;
+      }
+
+      /* Overlay for closing menu */
+      .menu-overlay {
+        position: fixed;
+        inset: 0;
+        z-index: 999;
+      }
+
+      /* Children container */
+      .children {
+        position: relative;
+      }
+    </style>
+  </head>
+  <body x-data="formBuilder()" @click="closeMenu()" @keydown.escape="closeMenu()">
+    
+    <header class="app-header">
+      <h1>📋 Formulieren Bouwer</h1>
+      <div class="header-actions">
+        <button @click="loadSample">Voorbeeld laden</button>
+        <button @click="exportJson" class="primary">Exporteren</button>
+      </div>
+    </header>
+
+    <main class="app-body">
+      <section class="builder">
+        <div class="builder-header">
+          <h2>Formulier structuur</h2>
+          <button class="add-root-btn" @click="addRootItem">+ Item toevoegen</button>
+        </div>
+
+        <div class="tree">
+          <!-- Empty state -->
+          <div x-show="items.length === 0" class="empty-state">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <path d="M14 2H6c-1.1 0-2 .9-2 2v16c0 1.1.9 2 2 2h12c1.1 0 2-.9 2-2V8l-6-6zM6 20V4h7v5h5v11H6z"/>
+            </svg>
+            <p>Nog geen items. Klik op "Item toevoegen" om te beginnen.</p>
+          </div>
+
+          <!-- Tree items -->
+          <template x-for="item in items" :key="item.id">
+            <div class="tree-item" :class="{ 'has-children': item.children && item.children.length > 0 }">
+              <!-- Item node -->
+              <div 
+                class="item-node"
+                :class="{ 'selected': selectedItem?.id === item.id }"
+                @click.stop="selectItem(item)"
+                @contextmenu.prevent="openMenu($event, item)"
+              >
+                <div class="item-handle">⋮⋮</div>
+                <div class="item-content">
+                  <input 
+                    type="text" 
+                    class="item-label" 
+                    x-model="item.label"
+                    @click.stop
+                    placeholder="Item label"
+                  />
+                  <span class="item-type" x-text="getTypeLabel(item.type)"></span>
+                </div>
+                <div class="item-badges">
+                  <span class="badge required" x-show="item.required">Verplicht</span>
+                  <span class="badge logic" x-show="item.hasLogic">Logic</span>
+                  <span class="badge waarden" x-show="item.values && item.values.length > 0">Waarden</span>
+                </div>
+                <button class="item-menu-btn" @click.stop="openMenu($event, item)">⋯</button>
+              </div>
+
+              <!-- Children (subitems) -->
+              <div class="children" x-show="item.children && item.children.length > 0">
+                <template x-for="child in item.children" :key="child.id">
+                  <div class="tree-item child" :class="{ 'has-children': child.children && child.children.length > 0 }">
+                    <div 
+                      class="item-node"
+                      :class="{ 'selected': selectedItem?.id === child.id }"
+                      @click.stop="selectItem(child, item)"
+                      @contextmenu.prevent="openMenu($event, child, item)"
+                    >
+                      <div class="item-handle">⋮⋮</div>
+                      <div class="item-content">
+                        <input 
+                          type="text" 
+                          class="item-label" 
+                          x-model="child.label"
+                          @click.stop
+                          placeholder="Subitem label"
+                        />
+                        <span class="item-type" x-text="getTypeLabel(child.type)"></span>
+                      </div>
+                      <div class="item-badges">
+                        <span class="badge required" x-show="child.required">Verplicht</span>
+                        <span class="badge logic" x-show="child.hasLogic">Logic</span>
+                        <span class="badge waarden" x-show="child.values && child.values.length > 0">Waarden</span>
+                      </div>
+                      <button class="item-menu-btn" @click.stop="openMenu($event, child, item)">⋯</button>
+                    </div>
+
+                    <!-- Level 3 children -->
+                    <div class="children" x-show="child.children && child.children.length > 0">
+                      <template x-for="subchild in child.children" :key="subchild.id">
+                        <div class="tree-item child">
+                          <div 
+                            class="item-node"
+                            :class="{ 'selected': selectedItem?.id === subchild.id }"
+                            @click.stop="selectItem(subchild, child)"
+                            @contextmenu.prevent="openMenu($event, subchild, child)"
+                          >
+                            <div class="item-handle">⋮⋮</div>
+                            <div class="item-content">
+                              <input 
+                                type="text" 
+                                class="item-label" 
+                                x-model="subchild.label"
+                                @click.stop
+                                placeholder="Subitem label"
+                              />
+                              <span class="item-type" x-text="getTypeLabel(subchild.type)"></span>
+                            </div>
+                            <div class="item-badges">
+                              <span class="badge required" x-show="subchild.required">Verplicht</span>
+                              <span class="badge logic" x-show="subchild.hasLogic">Logic</span>
+                              <span class="badge waarden" x-show="subchild.values && subchild.values.length > 0">Waarden</span>
+                            </div>
+                            <button class="item-menu-btn" @click.stop="openMenu($event, subchild, child)">⋯</button>
+                          </div>
+                        </div>
+                      </template>
+                    </div>
+                  </div>
+                </template>
+              </div>
+            </div>
+          </template>
+        </div>
+      </section>
+
+      <aside class="info-panel">
+        <h2>Eigen formulieren maken</h2>
+        <p>
+          Maak een nieuw formulier aan en voeg je eigen vragensets toe. Kies uit 
+          verschillende opties zoals meerkeuzevragen, dropdownmenu's, 
+          beoordelingsschalen en afbeeldingen. Met behulp van de logic bepaal 
+          je eenvoudig de opvolging van vragen en actiepunten.
+        </p>
+
+        <div class="field-types">
+          <button class="field-type-btn" @click="addRootItem('text')">
+            📝<span>Tekstveld</span>
+          </button>
+          <button class="field-type-btn" @click="addRootItem('number')">
+            🔢<span>Nummer</span>
+          </button>
+          <button class="field-type-btn" @click="addRootItem('select')">
+            📋<span>Dropdown</span>
+          </button>
+          <button class="field-type-btn" @click="addRootItem('radio')">
+            ⭕<span>Meerkeuze</span>
+          </button>
+          <button class="field-type-btn" @click="addRootItem('checkbox')">
+            ☑️<span>Checkbox</span>
+          </button>
+          <button class="field-type-btn" @click="addRootItem('date')">
+            📅<span>Datum</span>
+          </button>
+          <button class="field-type-btn" @click="addRootItem('photo')">
+            📷<span>Foto</span>
+          </button>
+          <button class="field-type-btn" @click="addRootItem('rating')">
+            ⭐<span>Beoordeling</span>
+          </button>
+        </div>
+      </aside>
+    </main>
+
+    <!-- Context Menu -->
+    <template x-if="menuOpen">
+      <div>
+        <div class="menu-overlay" @click="closeMenu()"></div>
+        <div 
+          class="context-menu" 
+          :style="`left: ${menuPosition.x}px; top: ${menuPosition.y}px;`"
+          @click.stop
+        >
+          <div class="context-menu-item" @click="editItem()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 17.25V21h3.75L17.81 9.94l-3.75-3.75L3 17.25zM20.71 7.04c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.39-.39-1.02-.39-1.41 0l-1.83 1.83 3.75 3.75 1.83-1.83z"/></svg>
+            Wijzigen
+          </div>
+          <div class="context-menu-item" @click="cutItem()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M9.64 7.64c.23-.5.36-1.05.36-1.64 0-2.21-1.79-4-4-4S2 3.79 2 6s1.79 4 4 4c.59 0 1.14-.13 1.64-.36L10 12l-2.36 2.36C7.14 14.13 6.59 14 6 14c-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4c0-.59-.13-1.14-.36-1.64L12 14l7 7h3v-1L9.64 7.64zM6 8c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm0 12c-1.1 0-2-.89-2-2s.9-2 2-2 2 .89 2 2-.9 2-2 2zm6-7.5c-.28 0-.5-.22-.5-.5s.22-.5.5-.5.5.22.5.5-.22.5-.5.5zM19 3l-6 6 2 2 7-7V3z"/></svg>
+            Knippen
+          </div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-item" @click="addSubitem()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+            Subitem toevoegen
+          </div>
+          <div class="context-menu-item" @click="openValues()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M3 13h2v-2H3v2zm0 4h2v-2H3v2zm0-8h2V7H3v2zm4 4h14v-2H7v2zm0 4h14v-2H7v2zM7 7v2h14V7H7z"/></svg>
+            Waarden
+          </div>
+          <div class="context-menu-item" @click="openLogic()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/></svg>
+            Logic
+          </div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-item" @click="moveLeft()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+            Verplaats links
+          </div>
+          <div class="context-menu-item" @click="moveRight()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+            Verplaats rechts
+          </div>
+          <div class="context-menu-divider"></div>
+          <div class="context-menu-item danger" @click="deleteItem()">
+            <svg viewBox="0 0 24 24" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            Verwijderen
+          </div>
+        </div>
+      </div>
+    </template>
+
+    <script>
+      function formBuilder() {
+        return {
+          items: [],
+          selectedItem: null,
+          selectedParent: null,
+          menuOpen: false,
+          menuPosition: { x: 0, y: 0 },
+          menuItem: null,
+          menuItemParent: null,
+          clipboard: null,
+          idCounter: 0,
+
+          init() {
+            this.loadSample();
+          },
+
+          generateId() {
+            return ++this.idCounter;
+          },
+
+          getTypeLabel(type) {
+            const labels = {
+              'text': 'Tekstveld',
+              'number': 'Nummer',
+              'select': 'Dropdown',
+              'radio': 'Meerkeuze',
+              'checkbox': 'Checkbox',
+              'date': 'Datum',
+              'photo': 'Foto',
+              'rating': 'Beoordeling'
+            };
+            return labels[type] || type;
+          },
+
+          createItem(type = 'text', label = 'Nieuw item') {
+            return {
+              id: this.generateId(),
+              label: label,
+              type: type,
+              required: false,
+              hasLogic: false,
+              values: [],
+              children: []
+            };
+          },
+
+          addRootItem(type = 'text') {
+            this.items = [...this.items, this.createItem(type)];
+          },
+
+          selectItem(item, parent = null) {
+            this.selectedItem = item;
+            this.selectedParent = parent;
+          },
+
+          openMenu(event, item, parent = null) {
+            this.menuOpen = true;
+            this.menuPosition = { x: event.clientX, y: event.clientY };
+            this.menuItem = item;
+            this.menuItemParent = parent;
+          },
+
+          closeMenu() {
+            this.menuOpen = false;
+            this.menuItem = null;
+            this.menuItemParent = null;
+          },
+
+          editItem() {
+            // Focus the label input
+            this.selectedItem = this.menuItem;
+            this.closeMenu();
+            // Could open a modal for more editing options
+            alert('Bewerk item: ' + this.menuItem.label);
+          },
+
+          cutItem() {
+            this.clipboard = { ...this.menuItem };
+            this.deleteItem();
+          },
+
+          addSubitem() {
+            if (!this.menuItem.children) {
+              this.menuItem.children = [];
+            }
+            this.menuItem.children = [...this.menuItem.children, this.createItem('text', 'Nieuw subitem')];
+            this.closeMenu();
+          },
+
+          openValues() {
+            const values = prompt('Waarden (komma-gescheiden):', this.menuItem.values?.join(', ') || '');
+            if (values !== null) {
+              this.menuItem.values = values.split(',').map(v => v.trim()).filter(v => v);
+            }
+            this.closeMenu();
+          },
+
+          openLogic() {
+            this.menuItem.hasLogic = !this.menuItem.hasLogic;
+            this.closeMenu();
+            if (this.menuItem.hasLogic) {
+              alert('Logic ingeschakeld voor: ' + this.menuItem.label);
+            }
+          },
+
+          moveLeft() {
+            // Move item up in hierarchy (make it a sibling of parent)
+            if (this.menuItemParent) {
+              // Find grandparent
+              const grandparent = this.findParent(this.menuItemParent, this.items);
+              const targetArray = grandparent ? grandparent.children : this.items;
+              const parentIndex = targetArray.findIndex(i => i.id === this.menuItemParent.id);
+              
+              // Remove from current parent
+              this.menuItemParent.children = this.menuItemParent.children.filter(c => c.id !== this.menuItem.id);
+              
+              // Add after parent
+              const itemCopy = { ...this.menuItem };
+              targetArray.splice(parentIndex + 1, 0, itemCopy);
+              
+              // Force reactivity
+              this.items = [...this.items];
+            }
+            this.closeMenu();
+          },
+
+          moveRight() {
+            // Move item down in hierarchy (make it a child of previous sibling)
+            const parent = this.menuItemParent;
+            const siblings = parent ? parent.children : this.items;
+            const index = siblings.findIndex(i => i.id === this.menuItem.id);
+            
+            if (index > 0) {
+              const previousSibling = siblings[index - 1];
+              if (!previousSibling.children) {
+                previousSibling.children = [];
+              }
+              
+              // Remove from current position
+              siblings.splice(index, 1);
+              
+              // Add as child of previous sibling
+              previousSibling.children = [...previousSibling.children, { ...this.menuItem }];
+              
+              // Force reactivity
+              this.items = [...this.items];
+            }
+            this.closeMenu();
+          },
+
+          findParent(item, list, parent = null) {
+            for (const i of list) {
+              if (i.id === item.id) return parent;
+              if (i.children) {
+                const found = this.findParent(item, i.children, i);
+                if (found !== undefined) return found;
+              }
+            }
+            return undefined;
+          },
+
+          deleteItem() {
+            if (this.menuItemParent) {
+              this.menuItemParent.children = this.menuItemParent.children.filter(c => c.id !== this.menuItem.id);
+            } else {
+              this.items = this.items.filter(i => i.id !== this.menuItem.id);
+            }
+            if (this.selectedItem?.id === this.menuItem.id) {
+              this.selectedItem = null;
+            }
+            this.closeMenu();
+          },
+
+          loadSample() {
+            this.idCounter = 10;
+            this.items = [
+              {
+                id: 1,
+                label: 'Persoonlijke gegevens',
+                type: 'text',
+                required: true,
+                hasLogic: false,
+                values: [],
+                children: [
+                  { id: 2, label: 'Naam', type: 'text', required: true, hasLogic: false, values: [], children: [] },
+                  { id: 3, label: 'Email', type: 'text', required: true, hasLogic: false, values: [], children: [] },
+                  { id: 4, label: 'Telefoonnummer', type: 'number', required: false, hasLogic: false, values: [], children: [] }
+                ]
+              },
+              {
+                id: 5,
+                label: 'Project details',
+                type: 'select',
+                required: true,
+                hasLogic: true,
+                values: ['Klein', 'Middel', 'Groot'],
+                children: [
+                  { id: 6, label: 'Projectnaam', type: 'text', required: true, hasLogic: false, values: [], children: [] },
+                  { id: 7, label: 'Startdatum', type: 'date', required: false, hasLogic: false, values: [], children: [] }
+                ]
+              },
+              {
+                id: 8,
+                label: 'Foto toevoegen',
+                type: 'photo',
+                required: false,
+                hasLogic: false,
+                values: [],
+                children: []
+              }
+            ];
+          },
+
+          exportJson() {
+            const json = JSON.stringify({ items: this.items }, null, 2);
+            navigator.clipboard.writeText(json).then(() => {
+              alert('JSON gekopieerd naar klembord!');
+            });
+          }
+        };
+      }
+    </script>
+  </body>
+</html>
